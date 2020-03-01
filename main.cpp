@@ -6,6 +6,8 @@
 #include "bindings/imgui_impl_glfw.h"
 #include "bindings/imgui_impl_opengl3.h"
 #include <stdio.h>
+#include "out/httplib.h"
+#include "out/foo.pb.h"
 
 // About OpenGL function loaders: modern OpenGL doesn't have a standard header file and requires individual function pointers to be loaded manually.
 // Helper libraries are often used for this purpose! Here we are supporting a few common ones: gl3w, glew, glad.
@@ -29,6 +31,14 @@
 #if defined(_MSC_VER) && (_MSC_VER >= 1900) && !defined(IMGUI_DISABLE_WIN32_FUNCTIONS)
 #pragma comment(lib, "legacy_stdio_definitions")
 #endif
+
+struct State {
+  enum defs {
+    initial,
+    wait_for_response,
+    got_response,
+  };
+};
 
 static void glfw_error_callback(int error, const char* description)
 {
@@ -115,6 +125,10 @@ int main(int, char**)
     bool show_demo_window = true;
     bool show_another_window = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+    auto state = State::initial;
+    std::string message_to_show;
+    auto host = "localhost";
+    auto port = 8080;
 
     // Main loop
     while (!glfwWindowShouldClose(window))
@@ -130,10 +144,6 @@ int main(int, char**)
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
-
-        // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
-        if (show_demo_window)
-            ImGui::ShowDemoWindow(&show_demo_window);
 
         // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
         {
@@ -153,18 +163,24 @@ int main(int, char**)
                 counter++;
             ImGui::SameLine();
             ImGui::Text("counter = %d", counter);
+            if (state == State::initial) {
+                if (ImGui::Button("Download shit")) {
+                    state = State::wait_for_response;
+                    httplib::Client cli(host, port);
+                    auto res = cli.Get("/foo");
+                    if (res && res->status == 200) {
+                      Foo foo;
+                      foo.ParseFromString(res->body);
+                      message_to_show = foo.bar();
+                      state = State::got_response;
+                    }
+                }
+            } else if (state == State::wait_for_response) {
+                ImGui::Button("Waiting for response"); // does nothing
+            } else if (state == State::got_response) {
+                ImGui::Button(message_to_show.c_str()); // does nothing
+            }
 
-            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-            ImGui::End();
-        }
-
-        // 3. Show another simple window.
-        if (show_another_window)
-        {
-            ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
-            ImGui::Text("Hello from another window!");
-            if (ImGui::Button("Close Me"))
-                show_another_window = false;
             ImGui::End();
         }
 
