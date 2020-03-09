@@ -2,6 +2,7 @@
 imgui/1.74
 glfw/3.2.1@bincrafters/stable
 gl3w/0.2@tuebel/testing
+sqlite3/3.31.0
 
 [generators]
 cmake
