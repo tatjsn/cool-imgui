@@ -10,7 +10,7 @@ void App::render()
 {
   ImGui::Begin("App");
 
-  ImGui::BeginChild("scroll", ImVec2(0, ImGui::GetFontSize() * 10));
+  ImGui::BeginChild("#scroll", ImVec2(0, ImGui::GetFontSize() * 10), true);
   for (auto entity : entities)
     ImGui::Text("%s %d", entity.name.c_str(), entity.age);
   ImGui::EndChild();
